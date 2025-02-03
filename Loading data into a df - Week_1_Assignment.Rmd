@@ -1,0 +1,46 @@
+---
+title: "Loading Data Into a Dataframe - Week1 Assignment"
+author: "Isaias Soto"
+date: "2025-02-02"
+output:
+  pdf_document: default
+  html_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+Using [fivethirtyeight.com](https://data.fivethirtyeight.com/) to source our data, we will load and show a glimpse into the dataframe. We are looking at the article [*"Where Police Have Killed Americans In 2015"*](https://fivethirtyeight.com/features/where-police-have-killed-americans-in-2015/) by Ben Casselman. The article takes a look at the Guardian's database of Americans killed by police in 2015. The article was published June 3, 2015. At the time of publishing, 467 Americans had been killed and recorded into the database. Casselman looks at the race/ethnicity of the deceased, as well as the location, proportion of white population in location, and household income of the location they were killed. The insights gleamed were focused on how the people killed were in some of the poorest areas of the U.S., measured by census tract. About 30% of the killings took place in census tracts that are in the bottom 20 percent nationally in terms of household income. Police killed about a quarter of people in majority black census tracts. The article was written on the heels of big moments in history, after the killings of Michael Brown in Ferguson, Missouri  and Freddie Gray in Baltimore, Maryland. 
+
+Raw data taken from [github repository](https://github.com/fivethirtyeight/data/blob/master/police-killings/police_killings.csv)
+
+
+**Loading data and viewing all columns**
+
+Here we will use the tidyverse for ease of manipulation and the RCurl package for retrieving the data directly from github.com. 
+```{r}
+library(tidyverse)
+library(RCurl)
+x <- getURL("https://raw.githubusercontent.com/fivethirtyeight/data/master/police-killings/police_killings.csv") 
+police_killings <- read.csv(text = x)
+glimpse(police_killings)
+```
+
+
+**Refined dataframe**
+
+Now we take the columns of interest and look at a subset of the data. 
+
+```{r}
+police_killings <- police_killings %>% select(name,age,gender,raceethnicity,month,day,year,city,state,tract_ce,cause,armed,share_white,share_black,h_income,urate) %>% rename(census_tract = tract_ce,cause_of_death = cause, percent_white = share_white, percent_black = share_black, household_income = h_income, unemployment_rate = urate)
+
+glimpse(police_killings)
+```
+
+**Conclusion**
+
+In conclusion, we have shown the code necessary to pull and load data into a dataframe from github and the steps needed to subset and rename columns for a ready to use dataframe for analysis. From here we can verify the insights found in the article that report 139 of the 467 killings occurred in the bottom 20% of census tracts. With more time we can take a look at the rates of those killed by gender, race, whether they were armed, and the comparison of percent white versus percent black census tract populations where the killings took place to gleam more insights. 
+
+****
