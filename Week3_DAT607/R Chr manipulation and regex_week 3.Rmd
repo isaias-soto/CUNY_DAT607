@@ -1,0 +1,102 @@
+---
+title: "Week 3 Assignment"
+author: "Isaias soto"
+date: "2025-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##### \#1
+*Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS"*
+
+```{r} 
+library(tidyverse)
+library(RCurl)
+x <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/08e7bcca8ddd127ac68612a511c7d05f8d16261e/majors-list.csv") 
+major_list <- read.csv(text = x)
+major_list[146,]
+major_list <- major_list[-146,] # remove missing value
+
+```
+
+```{r}
+str_view(major_list$Major,"DATA|STATISTICS")
+major_list[c(44,52,59),]
+```
+
+
+##### \#2 
+*Write code that transforms the data below:*
+
+[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+
+[13] "olive"        "salal berry"
+
+*Into a format like this:*
+
+*c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")*
+
+
+
+The following code sets up the problem as a character vector with 14 elements:
+```{r}
+fruits <- c("bell pepper", "bilberry", "blackberry", "blood orange", 
+            "blueberry", "cantaloupe", "chili pepper", "cloudberry", 
+            "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+fruits
+```
+
+Next, it seems we are to shrink this into a one-element vector. This can be achieved by the following:
+```{r}
+str_view(str_flatten(fruits, ", "))
+```
+
+
+
+*The two exercises below are taken from R for Data Science, 14.3.5.1 in the on-line version:*
+
+##### \#3 
+
+*Describe, in words, what these expressions will match:*
+
+|Header|Description|
+
+(.)\1\1
+"(.)(.)\\\\2\\\\1"
+(..)\1
+"(.).\\\\1.\\\\1"
+"(.)(.)(.).*\\\\3\\\\2\\\\1"
+
+
+| Exercise                                	| Description                                                                                                                                                                                                                	|
+|-----------------------------------------	|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	|
+| (.)\1\1                                 	| This would match words that have the same letter repeated 3 times, for example, "bbb".                                                                                                                                     	|
+| "(.)(.)\\\\2\\\\1"                      	| This would match words where the second letter is repeated and this first letter is the start and end, for example, "abba".                                                                                                	|
+| (..)\1                                  	| This would match words with any two letters with the same two letters repeated, for example, "cdcd".                                                                                                                       	|
+| "(.).\\\\1.\\\\1"                       	| This would match words that begin with any letter, followed by a different letter, followed by the first letter repeated, <br>followed by any letter, and finally with followed by the first letter. For example, "abaca". 	|
+| "(.)(.)(.).*\\\\3\\\\2\\\\1"            	| This matches words where there are 3 different letters, optionally followed by zero to any number of characters, and end with <br>the first three letters in reverse order. For example, "abcdcba" or "abccba".            	|
+
+##### \#4 
+*Construct regular expressions to match words that:*
+
+*Start and end with the same character.*
+*Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)*
+*Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)*
+
+
+| Exercise                                                                                  	| regex                   	|
+|-------------------------------------------------------------------------------------------	|-------------------------	|
+| Start and end with the same character.                                                    	| ^(.).*\\1$              	|
+| Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)          	| ([A-Za-z][A-Za-z]).*\\1 	|
+| Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.) 	| [A-Za-z].\*\\1.\*\\1    	|
+
+
+****
