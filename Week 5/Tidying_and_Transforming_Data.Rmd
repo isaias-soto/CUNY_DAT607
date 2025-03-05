@@ -1,0 +1,58 @@
+---
+title: "Tidying and Transforming Data"
+author: "Isaias Soto"
+date: 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+The data we are going to look at today is a small sample of arrival delays from two airlines across five destinations [Source: Numbersense, Kaiser Fung, McGraw Hill, 2013]. A csv file and the rmd file used to create this paper can be found on one of my personal [github repositories.](https://github.com/isaias-soto/CUNY_DAT607/tree/main/Week%205)  
+
+
+**Loading data and libraries**
+
+Here we will use the tidyverse for ease of manipulation and the RCurl package for retrieving the data directly from github.com. 
+```{r, message=FALSE}
+library(tidyverse)
+library(RCurl)
+x <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Week%205/arrival_delays.csv") 
+arrival_delays <- read.csv(text = x, na.strings = c("NA",""))
+arrival_delays
+```
+
+
+**Tidy and Transform Data**
+
+Now we'll use tidyr and dplyr to clean up the data as needed. It should be noted that `fill()` requires column values to be NA before it can transform them. This issue was solved by adding the `na.strings` argument when we read in the csv.
+
+```{r clean-up-analysis}
+arr_delays_tidy <- arrival_delays |>
+  rename(airline = X, status = X.1, Los_Angeles = Los.Angeles,       # rename columns
+         San_Diego = San.Diego, San_Francisco = San.Francisco) |>  
+  slice(-3) |>    # remove empty row
+  fill(airline, .direction = "down") |>     # fill missing values                         
+  mutate(Phoenix = as.numeric(gsub(",", "", Phoenix)),    # remove comma from numbers and transform to numeric
+         Seattle = as.numeric(gsub(",", "", Seattle))) |>
+  pivot_longer(cols = 3:7, names_to = "destination", values_to = "count") |>  # transpose destinations
+  pivot_wider(names_from = status, values_from = count) |>   # move count values to new columns based on status
+  rename(on_time = `on time`) |>
+  mutate(total = on_time + delayed,  # create new columns for analysis
+         proportion_on_time = round(on_time/total,4),
+         proportion_delayed = round(delayed/total,4)) |>
+  arrange(destination)
+arr_delays_tidy
+```
+
+We can see that we started by renaming columns, filling in missing data, and removing an empty row. Next converted count values to numeric by first removing commas. We then reshaped the data by transposing columns into one called `destination`. We took the values and spread them into two columns so we could create new columns for analysis. The new columns are a sum of the on time and delayed counts to then get a proportion of on time and delayed flights by airline. I arranged the data by destination to compare quickly which airline has proportionally more on time flights. For each destination it can be seen that ALASKA airline has proportionally more on time flights than AM WEST. 
+
+
+
+**Conclusion**
+
+In conclusion, we can see that dplyr has a number of functions to transform the data and tidyr functions are great for reshaping the data. Afterwards, we used dplyr to add new columns for analysis and concluded that ALASKA airline has a better proportion of on time flights than AM WEST for each destination in the dataset.  
+
+****
