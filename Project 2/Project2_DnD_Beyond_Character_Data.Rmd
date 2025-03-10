@@ -1,0 +1,71 @@
+---
+title: "Project 2 - D&D Beyond Character Data"
+author: "Isaias Soto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Our data is from D&D Beyond's character creation feature on their [website](https://www.dndbeyond.com/). Dungeons and dragons, or D&D for short, is a fantasy tabletop role-playing game (TTRPG) originally created and designed by Gary Gygax and Dave Arneson in 1974. D&D is in the category of wargaming, but it differs by allowing players to create their own individual characters instead of traditionally controlling military formations. The characters travers fantatsy worlds and go on adventures with a dungeon master (DM) creating and taking the characters and their players through a story mostly improvised. Our data contains characters created for the game with multiple attributes, stats, skills, and even the region where users are from. 
+
+**Loading data and libraries**
+
+```{r Load-data-libraries, message=FALSE}
+library(tidyverse)
+library(RCurl)
+y <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Project%202/dnd_chars_all.tsv") 
+dnd <- read.csv(text = y, sep = "\t") 
+glimpse(dnd)
+```
+
+
+**Tidying data**
+
+We are going to start by removing the columns `ip`, `finger`, `hash`, and `name` since these are associated with ip addresses and identifying the devices users are operating, which we do not have use for. We will also remove the `alignment` column since this is a messier version of the `processedAlignment` column that is standardized. We will remove columns `good` and `lawful` since they are empty. Finally we'll coerce the `date` column into data type "Date" so we can see trends over time. For column removal we'll use the `dplyr` package, and for date-time coercion we'll use the `lubridate` package.  
+
+```{r cleanup}
+dnd_tidy <- dnd |> 
+  select(-c(ip, finger, hash, name, alignment, good, lawful)) |>
+  mutate(date = as_date(parse_date_time(date, "Ymd HMS")))
+glimpse(dnd_tidy)
+```
+
+**Analysis**
+
+Next, we'll do some analysis on the newly cleaned dataset. We'll examine the `date` variable to see when characters are being created, and the `processedRace` and `countryCode` variables to see which races are chosen most often and from where in the world. 
+
+```{r analysis-date}
+ggplot(dnd_tidy, aes(x = date)) +
+  geom_histogram(bins = 20)
+summary(dnd_tidy$date)
+```
+
+The left skewed histogram above shows that character creation actually drops off as time goes on. Now let's take a look at where people in the world are engaging with this website.
+
+```{r analysis-country}
+processed_race_table <- table(dnd_tidy$processedRace)
+country_code_table <- table(dnd_tidy$countryCode)
+dnd_tidy |> 
+  filter(!is.na(countryCode)) |>
+  group_by(countryCode) |>
+  count() |>
+  filter(n > 200) |>
+  ggplot(aes(x = countryCode, y = n)) +
+  geom_col() +
+  labs(title = "Top 3 countries that create characters on D&D Beyond",
+       subtitle = "Canada, Great Britain, US", x = "Country", y = "Count")
+```
+
+The above plot shows the top 3 countries around the world that create the most characters using D&D Beyond. The US is the highest followed by Canada and Great Britain. I filtered the counts so only they would only show countries where more than 200 characters were created by users. 
+
+**Conclusion**
+
+In conclusion, we took this messy dataset and removed unnecessary columns and coerced our `date` variable, of type character, into a date-time and then a date type of variable to see when characters were being created. We saw that character creation is dropping over time. We also looked at the origin of users who created characters and found the top 3 character creating countries where users originate from.  
+
+****
+
+

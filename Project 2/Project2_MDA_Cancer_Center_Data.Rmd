@@ -1,0 +1,56 @@
+---
+title: "Project 2 - MDA Cancer Center Data"
+author: "Isaias Soto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Our data is from one of the largest breast oncology institutions in the nation, Houston's MD Anderson Cancer Center. They serve about 40,000 patients with breast cancer annually, amounting to an average of 3,333 patients per month. The data we are going to look at provides a basic notion of the incidence of breast cancer in the Houston area, even though MD Anderson does not provide its exact monthly diagnosis rates. The data presents an aggregated table of service counts for patient groups from 2020-2024. The goal is to tidy up the data and do minimal analysis. 
+
+
+**Loading data and libraries**
+
+```{r, message=FALSE}
+library(tidyverse)
+library(RCurl)
+x <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Project%202/Untidy%20dataset%20MDA.csv") 
+cancer <- read.csv(text = x, na.strings = c("NA",""), skip = 1, header = TRUE) # start by skipping title line
+cancer
+```
+
+
+**Tidying and reshaping data**
+
+We see started by skipping the title line when we read the csv into our environment. Next, we want to get rid of the blank columns at the tail end of this data frame and rename the Patient_ID column to reflect that it is an aggregated group ID. Then, we'll reshape the data to move case years into its own column, creating a long format dataset instead of wide. 
+
+```{r cleanup}
+tidy_cancer <- cancer |> 
+  select(-c(X,X.1)) |>   # remove empty columns
+  rename(Patient_Group_ID = Patient_ID) |>   # rename to reflect group
+  rename_with(~gsub("Cases_","",.),starts_with("Cases_")) |>  # isolate year
+  pivot_longer(cols = "2020":"2024", names_to = "Cases_Year", values_to = "Count") # reshape to longer format
+
+# next we add a column with the rate of patients served for that year + group
+tidy_cancer <- tidy_cancer |>
+  group_by(Cases_Year) |>
+  mutate(Year_service_rate = paste0(round((Count/sum(Count))*100,1),"%")) |>
+  ungroup() |>
+  group_by(Race) |>
+  mutate(Race_service_rate = paste0(round((Count/sum(Count))*100,1),"%"))
+tidy_cancer
+```
+
+**Analysis**
+
+From our new dataset above we see the new columns `Year_service_rate` and `Race_service_rate`. The `Year_service_rate` aggregates by year and shows the service rate for each patient group for that year. The `Race_service_rate` shows the service rate of each patient group year out of all patient groups from within each race group. We can see that from 2020 to 2024, service rates increased across all patient groups by race from year to year. However, service rates by year did not seem to change across patient groups from year to year.  
+
+**Conclusion**
+
+In conclusion, we took this wide format dataset and reshaped it into a longer format while cleaning up empty columns and column names. Then, we added two new columns for quick analysis on service rates for patient groups by year and in proportion to the groups race make up. Given more time, I would have liked to cross reference treatment success rates with this count data for patients served. 
+
+
