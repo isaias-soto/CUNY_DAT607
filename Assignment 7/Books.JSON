@@ -1,0 +1,34 @@
+[
+    [
+        "Book id",
+        "Title",
+        "Author",
+        "Goodreads Rating",
+        "Number of Pages",
+        "Highlights"
+    ],
+    [
+        "1",
+        "A Court of Thorns and Roses #1",
+        "Sarah J. Maas",
+        "4.17",
+        "419",
+        "Romance, Magic, Adventure, Retelling"
+    ],
+    [
+        "2",
+        "The Invisible Life of Addie LaRue",
+        "Victoria E. Schwab",
+        "4.18",
+        "448",
+        "Mystery, Romance, Mystical"
+    ],
+    [
+        "3",
+        "A Thousand Beginnings and Endings",
+        "Ellen Oh, Elsie Chapman",
+        "3.77",
+        "336",
+        "Short Stories, Mythology, Science-Fiction, Retelling"
+    ]
+]
