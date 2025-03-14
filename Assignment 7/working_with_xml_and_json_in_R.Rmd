@@ -1,0 +1,128 @@
+---
+title: "Working with XML and JSON in R"
+author: "Isaias Soto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+We are working with data containing information on 3 fantasy books. We chose to store this information in three separate files: html, xml, and json. The idea is to familiarize ourselves with these different file types and structures, and using packages to load the data from these different formats for downstream use in R.  
+
+### Loading data and libraries
+
+```{r Load-data-libraries, message=FALSE}
+library(dplyr) # to use piping function `|>` 
+library(xml2) #reading raw data from url and parsing xml file
+library(XML) # view xml file as its plain text
+library(rvest) # read html as seen on web, parse html text
+library(jsonlite) # read json files into R from url
+```
+
+
+### Reading data into R
+
+**HTML**
+
+Here we will read in the url for the html formatted table. We are taking a public access point, or path to the raw file, and inserting it into the object `html_raw`.
+
+```{r raw-html}
+url_html <- "https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Assignment%207/Books.html"
+html_raw <- read_html(url_html) # get html text from url 
+html_raw 
+```
+
+You can see how the output of the raw file still has holdover formatting of the html file. Next, we want to coerce this into a data frame using the `html_table` function from the `rvest` package to first coerce this into a table as if the html code were run on the web. Then, using `base` R package we'll coerce this into a dataframe for downstream use in R. 
+
+```{r html-df}
+html_books <- html_raw |>
+  html_table() |> # get table from raw html text
+  as.data.frame() # coerce list element to df 
+html_books  
+```
+
+**XML**
+
+Now we want to read in and prepare an xml file for downstream use in R. We begin by getting the xml file from the url in a convenient format.
+
+```{r raw-xml}
+url_xml <- "https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Assignment%207/Books.xml"
+xml_raw <- read_xml(url_xml) # read raw file into R from url
+xml_raw
+```
+To see how our original xml file looks like as plain text we can use `xmlParse` from the `XML` package.
+
+```{r xml-original}
+xml_raw |>
+  xmlParse(url_xml) 
+```
+
+Our next step is to take the conveniently formatted xml file and parse through to get a usable tibble. We'll be using `xml_find_all` to extract nodes with the same tag and use `xml_text`, `xml_integer`, and `xml_double` to extract only the data from the nodes. 
+
+```{r xml-parse-df}
+## EXTRACT INFO
+
+book_id <- xml_raw |> 
+  xml_find_all(".//book_id") |> # identify nodes
+  xml_text() # extract text from nodes
+
+title <- xml_raw |> 
+  xml_find_all(".//title") |> # identify nodes
+  xml_text() # extract text from nodes
+
+author <- xml_raw |> 
+  xml_find_all(".//author") |> # identify nodes
+  xml_text() # extract text from nodes
+
+goodreads_rating <- xml_raw |> 
+  xml_find_all(".//goodreads_rating") |> # identify nodes
+  xml_double() # extract numeric from nodes
+
+number_of_pages <- xml_raw |> 
+  xml_find_all(".//number_of_pages") |> # identify nodes
+  xml_integer() # extract integers from nodes
+
+highlights <- xml_raw |> 
+  xml_find_all(".//highlights") |> # identify nodes
+  xml_text() # extract text from nodes
+
+
+## FORMAT AS TIBBLE
+
+xml_books <- tibble(book_id = book_id, title = title, author = author,
+                    goodreads_rating = goodreads_rating, 
+                    number_of_pages = number_of_pages, highlights = highlights)
+xml_books
+```
+
+
+**JSON**
+
+Next, we will apply the same ideas as above to our json file. We'll begin by using `fromJSON` from the `jsonlite` package to get a raw output of a list-like dataframe.
+```{r raw-json}
+url_json <- "https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Assignment%207/Books.JSON"
+json_raw <- fromJSON(url_json) # get raw json file from url
+json_raw <- json_raw[-1,]
+json_raw
+```
+Finally, we can use the `base` package `as.data.frame` to coerce the output into a dataframe. We'll also have to rename columns and coerce the appropriate variables into the correct data types.
+
+```{r json-df}
+json_books <- as.data.frame(json_raw) |>
+  mutate(V1 = as.integer(V1), V4 = as.numeric(V4), V5 = as.integer(V5)) |>
+  rename(book_id = V1, title = V2, author = V3, goodreads_rating = V4, 
+         number_of_pages = V5, highlights = V6)
+json_books
+```
+
+
+### Conclusion
+
+In summary, we took read three different file types html, xml, and json into **R** and prepared them as dataframes for downstream use. Each file type used different preparation methods and the raw files looked different from each other. After preparation, each dataframe/tibble looks exactly like each other with the same data types. 
+
+****
+
+
