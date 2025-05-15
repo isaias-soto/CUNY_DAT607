@@ -1,0 +1,154 @@
+---
+title: "Final Project_Soto"
+author: "Isaias Soto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+
+Music is a near universal language that most people enjoy in one way or another. I would like to know what makes a song popular and use linear regression with various predictors to build a model that allows me to predict a song's popularity. I'll start with two datasets, merge them, tidy and transform where appropriate, and choose a regression model using backward elimination. Before I run the backward elimination step function I will run some exploratory data analysis to see if all variables are viable or in need of transformation. Using the optimal predictors I will evaluate the model based on the adjusted R-squared values and plot the residuals vs fitted values to ensure assumptions of linearity and homoscedasticity hold up. 
+
+
+## Load Data and Libraries, and Tidy data
+```{r load-data, message=FALSE,warning=FALSE}
+library(tidyverse)
+library(RCurl)
+
+
+low_pop_url <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Final%20Project/Data/low_popularity_spotify_data.csv")
+low_pop <- read.csv(text = low_pop_url)
+high_pop_url <- getURL("https://raw.githubusercontent.com/isaias-soto/CUNY_DAT607/refs/heads/main/Final%20Project/Data/high_popularity_spotify_data.csv")
+high_pop <- read.csv(text = high_pop_url)
+
+# Combine low and high popular music datasets
+common_column_names <- intersect(names(low_pop),names(high_pop))
+common <- intersect(low_pop,high_pop) # This shows the duplicate rows from both df's
+
+popular_music <- merge(low_pop,high_pop, by = common_column_names,all = TRUE) #merge into one df
+popular_music <- popular_music |> #de-dupe by track name and select relevant columns
+  group_by(track_artist) |>
+  distinct(track_name,.keep_all = TRUE) |>
+  ungroup() |>
+  select(track_popularity,speechiness,danceability,track_artist,duration_ms,energy,playlist_genre,playlist_subgenre,track_name,mode,instrumentalness,valence,key,tempo,loudness,acousticness,liveness) |>
+  mutate(key = factor(key)) # coerce to factor
+```
+
+The `low-pop` dataframe has 3,145 rows and 29 columns, while the `high-pop` dataframe has 1,686 rows and 29 columns. When merging, the new dataframe `popular_music` has 4,788 rows and 29 columns, a 43 observation deficit. Using the `intersect` function shows the observations that appear in the orginal dataframes and yields 43. This means my new dataframe `popular_music` is already de-duplicated by rows. However, looking at `track_name` shows that the same song may appear if it is in a different playlist. So, we will de-duplicate by `track_name` after grouping by artist; this results in 322 observations deleted. After selecting only those columns that I will use in the analysis, the final dataset contains 29 variables and 4,466 observations. 
+
+
+## EDA
+
+Lets take a look at the distributions of the response and predictor variables.
+
+```{r}
+# track popularity
+ggplot(popular_music, aes(x= track_popularity)) +
+  geom_histogram(binwidth = 5)
+
+# speechiness
+ggplot(popular_music, aes(x= speechiness)) + # needs a log transforamation
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# log of speechiness
+ggplot(popular_music, aes(x= log(speechiness))) + # roughly normal
+  geom_histogram(bins = 40,na.rm = TRUE) 
+
+# danceability
+ggplot(popular_music, aes(x= danceability)) + # roughly normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# duration_ms
+ggplot(popular_music, aes(x= duration_ms)) + # nearly normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# energy
+ggplot(popular_music, aes(x= energy)) + # roughly normal
+  geom_histogram(bins = 35,na.rm = TRUE)
+
+# instrumentalness
+ggplot(popular_music, aes(x= instrumentalness)) + #not at all normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# valence
+ggplot(popular_music, aes(x= valence)) + # roughly normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# tempo
+ggplot(popular_music, aes(x= tempo)) + 
+  geom_histogram(bins = 30,na.rm = TRUE) # nearly normal
+
+# loudness
+ggplot(popular_music, aes(x= loudness)) + # roughly normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# acousticness
+ggplot(popular_music, aes(x= acousticness)) + # not normal at all
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+# liveness
+ggplot(popular_music, aes(x= liveness)) + # roughly normal
+  geom_histogram(bins = 40,na.rm = TRUE)
+
+```
+
+Most of variables were nearly normal to roughly normal with the exceptions of `speechiness`, `instrumentallness` and `acousticness`. After a log transformation on `speechiness` the distribution is closer to roughly normal. I will omit `instrumentallness` and `acousticness` since they are not at all normal and instead represent probability of the dichotomous values of 0 and 1. This pseudo dichotomous variable status is also found in liveness, so we will omit this predictor as well.
+
+## Modeling
+
+Now we want to know which linear regression model will be best to use with which predictors. We will use a backward step function to choose the best fit model. 
+
+```{r model-choice}
+
+# Fit the initial full model
+initial_model <- lm(track_popularity ~ log(speechiness) + danceability + duration_ms + energy + valence + key + tempo + loudness, data = popular_music)
+
+# Perform backward elimination
+backward_model <- step(initial_model, direction = "backward")
+
+# Summary of the selected model
+summary(backward_model)
+
+```
+
+
+The model chosen doesn't seem very good as it only explains about 4% of the variance in the response variable per the adjusted R-squared value. The model also uses 2 predictors, `valence` and `tempo`, that do not seem to be significant in predicting our response variable. There may also be issues will colinearity since `danceability` is defined as a score describing how suitable a track is for dancing based on tempo, rhythm stability, beat strength and overall regularity. `Energy` is a measure of intensity based on how fast, loud, and noisy a track is. `Loudness` and `tempo` are how loud and fast a track can be, which means there is overlap and possible colinearity between these variables and `danceability` and `energy`. 
+
+```{r}
+mod <- lm(data = popular_music, formula = track_popularity ~ danceability + energy + valence + tempo + loudness)
+pred <- predict(mod)
+pred <- append(pred,54.27)
+
+# Another view of response variable
+x <- seq(from = 1, to = 100, along.with = popular_music$track_popularity)
+ggplot(popular_music, aes(x = x, y = track_popularity)) +
+  geom_point() +
+  geom_smooth(method = "glm", formula = y ~ poly(x,1))
+
+# track_popularity vs predicted values
+ggplot(popular_music, aes(x = track_popularity, y = pred)) +
+  geom_point()
+
+# residuals vs fitted values
+ggplot(data = mod,aes(x = .fitted, y = .resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  xlab("Fitted values") +
+  ylab("Residuals")
+
+```
+
+
+Looking at our plot of the response variable over the span of it's values on the x-axis we see an almost stepwise function that would be difficult to fit with a linear model. To get a real sense if a linear model would be a best fit we look at the plot of residuals vs fitted values. The plot shows clumping of data points on the right while fanning out to the left. This is indicative of violating assumptions of linearity and homoscedasticity in the residuals. The conclusion is that a linear model is not a good fit. 
+
+## Conclusion 
+
+After using backward elimination to choose our best fit model for predicting `track_popularity` we interpreted the results of the summary of the regression model. The adjusted R-squared valued showed that the model only explained 4% of the variance in `track_popularity` which seemed like the model was not better than then just taking the average to guess the `track_popularity`. For good measure we also plotted out the residuals vs fitted values to measure the assumptions of linearity and homoscedasticity in the residuals. The plot pointed to a violation of both of these assumptions which points to the conclusion that a linear model is not the best fit for predicting `track_popularity`. 
+
+**References**
+
+Ameh, S. (2025, January 7). Spotify Music dataset. Kaggle. https://www.kaggle.com/datasets/solomonameh/spotify-music-dataset 
